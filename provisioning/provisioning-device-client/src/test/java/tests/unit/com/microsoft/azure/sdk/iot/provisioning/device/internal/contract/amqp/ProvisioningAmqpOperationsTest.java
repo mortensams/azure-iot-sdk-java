@@ -155,7 +155,7 @@ public class ProvisioningAmqpOperationsTest
             }
         };
 
-        provisioningAmqpOperations.open(TEST_REGISTRATION_ID, mockedSSLContext, true, false);
+        provisioningAmqpOperations.open(TEST_REGISTRATION_ID, mockedSSLContext, null, false);
         new NonStrictExpectations()
         {
             {
@@ -179,7 +179,7 @@ public class ProvisioningAmqpOperationsTest
         ProvisioningAmqpOperations provisioningAmqpOperations = new ProvisioningAmqpOperations(TEST_SCOPE_ID, TEST_HOST_NAME);
 
         //act
-        provisioningAmqpOperations.open(null, mockedSSLContext, true, false);
+        provisioningAmqpOperations.open(null, mockedSSLContext, null, false);
 
         //assert
     }
@@ -192,7 +192,7 @@ public class ProvisioningAmqpOperationsTest
         ProvisioningAmqpOperations provisioningAmqpOperations = new ProvisioningAmqpOperations(TEST_SCOPE_ID, TEST_HOST_NAME);
 
         //act
-        provisioningAmqpOperations.open("", mockedSSLContext, true, false);
+        provisioningAmqpOperations.open("", mockedSSLContext, null, false);
 
         //assert
     }
@@ -205,7 +205,7 @@ public class ProvisioningAmqpOperationsTest
         ProvisioningAmqpOperations provisioningAmqpOperations = new ProvisioningAmqpOperations(TEST_SCOPE_ID, TEST_HOST_NAME);
 
         //act
-        provisioningAmqpOperations.open(TEST_REGISTRATION_ID, null, true, false);
+        provisioningAmqpOperations.open(TEST_REGISTRATION_ID, null, null, false);
 
         //assert
     }
@@ -227,7 +227,7 @@ public class ProvisioningAmqpOperationsTest
         };
 
         //act
-        provisioningAmqpOperations.open(TEST_REGISTRATION_ID, mockedSSLContext, true, false);
+        provisioningAmqpOperations.open(TEST_REGISTRATION_ID, mockedSSLContext, null, false);
     }
 
     // SRS_ProvisioningAmqpOperations_07_005: [This method shall construct the Link Address with /<scopeId>/registrations/<registrationId>.]
@@ -247,7 +247,7 @@ public class ProvisioningAmqpOperationsTest
         };
 
         //act
-        provisioningAmqpOperations.open(TEST_REGISTRATION_ID, mockedSSLContext, true, false);
+        provisioningAmqpOperations.open(TEST_REGISTRATION_ID, mockedSSLContext, null, false);
 
         //assert
         new Verifications()
@@ -271,7 +271,7 @@ public class ProvisioningAmqpOperationsTest
                 mockedAmqpConnection.open();
             }
         };
-        provisioningAmqpOperations.open(TEST_REGISTRATION_ID, mockedSSLContext, true, false);
+        provisioningAmqpOperations.open(TEST_REGISTRATION_ID, mockedSSLContext, null, false);
 
         new NonStrictExpectations()
         {
@@ -302,7 +302,7 @@ public class ProvisioningAmqpOperationsTest
                 mockedAmqpConnection.open();
             }
         };
-        provisioningAmqpOperations.open(TEST_REGISTRATION_ID, mockedSSLContext, true, false);
+        provisioningAmqpOperations.open(TEST_REGISTRATION_ID, mockedSSLContext, null, false);
 
         //act
         provisioningAmqpOperations.close();
@@ -370,7 +370,7 @@ public class ProvisioningAmqpOperationsTest
                 mockedAmqpConnection.open();
             }
         };
-        provisioningAmqpOperations.open(TEST_REGISTRATION_ID, mockedSSLContext, true, false);
+        provisioningAmqpOperations.open(TEST_REGISTRATION_ID, mockedSSLContext, null, false);
 
         setupSendReceiveMocks();
 
@@ -393,7 +393,7 @@ public class ProvisioningAmqpOperationsTest
                 mockedAmqpConnection.open();
             }
         };
-        provisioningAmqpOperations.open(TEST_REGISTRATION_ID, mockedSSLContext, true, false);
+        provisioningAmqpOperations.open(TEST_REGISTRATION_ID, mockedSSLContext, null, false);
 
         new NonStrictExpectations()
         {
@@ -427,7 +427,7 @@ public class ProvisioningAmqpOperationsTest
                 mockedAmqpConnection.open();
             }
         };
-        provisioningAmqpOperations.open(TEST_REGISTRATION_ID, mockedSSLContext, true, false);
+        provisioningAmqpOperations.open(TEST_REGISTRATION_ID, mockedSSLContext, null, false);
 
         new NonStrictExpectations()
         {
@@ -469,7 +469,7 @@ public class ProvisioningAmqpOperationsTest
                 mockedAmqpConnection.open();
             }
         };
-        provisioningAmqpOperations.open(TEST_REGISTRATION_ID, mockedSSLContext, true, false);
+        provisioningAmqpOperations.open(TEST_REGISTRATION_ID, mockedSSLContext, null, false);
 
         new NonStrictExpectations()
         {
@@ -504,7 +504,7 @@ public class ProvisioningAmqpOperationsTest
                 mockedAmqpConnection.open();
             }
         };
-        provisioningAmqpOperations.open(TEST_REGISTRATION_ID, mockedSSLContext, true, false);
+        provisioningAmqpOperations.open(TEST_REGISTRATION_ID, mockedSSLContext, null, false);
 
         setupSendReceiveMocks();
 

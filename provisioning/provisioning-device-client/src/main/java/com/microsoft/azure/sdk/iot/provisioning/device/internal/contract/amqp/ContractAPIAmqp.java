@@ -7,7 +7,9 @@ import com.microsoft.azure.sdk.iot.provisioning.device.internal.ProvisioningDevi
 import com.microsoft.azure.sdk.iot.provisioning.device.internal.contract.ProvisioningDeviceClientContract;
 import com.microsoft.azure.sdk.iot.provisioning.device.internal.exceptions.*;
 import com.microsoft.azure.sdk.iot.provisioning.device.internal.contract.ResponseCallback;
+import com.microsoft.azure.sdk.iot.provisioning.device.internal.task.ContractState;
 import com.microsoft.azure.sdk.iot.provisioning.device.internal.task.RequestData;
+import com.microsoft.azure.sdk.iot.provisioning.device.internal.task.ResponseData;
 
 import javax.net.ssl.SSLContext;
 import java.io.IOException;
@@ -16,6 +18,9 @@ public class ContractAPIAmqp extends ProvisioningDeviceClientContract
 {
     private ProvisioningAmqpOperations provisioningAmqpOperations;
     private boolean useWebSockets;
+
+    private String idScope;
+    private AmqpsProvisioningSaslHandler amqpSaslHandler;
 
     /**
      * This constructor creates an instance of DpsAPIAmqps class and initializes member variables
@@ -30,8 +35,8 @@ public class ContractAPIAmqp extends ProvisioningDeviceClientContract
             throw new ProvisioningDeviceClientException("ProvisioningDeviceClientConfig cannot be NULL.");
         }
         // SRS_ContractAPIAmqp_07_002: [The constructor shall throw ProvisioningDeviceClientException if either idScope and hostName are null or empty.]
-        String idScope = provisioningDeviceClientConfig.getIdScope();
-        if ((idScope == null) || (idScope.isEmpty()))
+        this.idScope = provisioningDeviceClientConfig.getIdScope();
+        if ((this.idScope == null) || (this.idScope.isEmpty()))
         {
             throw new ProvisioningDeviceClientException("The idScope cannot be null or empty.");
         }
@@ -45,7 +50,7 @@ public class ContractAPIAmqp extends ProvisioningDeviceClientContract
         this.useWebSockets = provisioningDeviceClientConfig.getUseWebSockets();
 
         // SRS_ContractAPIAmqp_07_001: [The constructor shall save the scope id and hostname.]
-        provisioningAmqpOperations = new ProvisioningAmqpOperations(idScope, hostName);
+        provisioningAmqpOperations = new ProvisioningAmqpOperations(this.idScope, hostName);
     }
 
     /**
@@ -56,38 +61,57 @@ public class ContractAPIAmqp extends ProvisioningDeviceClientContract
     @Override
     public synchronized void open(RequestData requestData) throws ProvisioningDeviceConnectionException
     {
+        //dummy call
+    }
+
+    /**
+     * Requests hub to provide a device key to begin authentication over AMQP (Only for TPM)
+     * @param requestData A non {@code null} value for the RequestData to be used
+     * @param responseCallback A non {@code null} value for the callback
+     * @param authorizationCallbackContext An object for context. Can be {@code null}
+     * @throws ProvisioningDeviceClientException If any of the parameters are invalid ({@code null} or empty)
+     * @throws ProvisioningDeviceTransportException If any of the API calls to transport fail
+     * @throws ProvisioningDeviceHubException If hub responds back with an invalid status
+     */
+    public synchronized void requestNonceForTPM(RequestData requestData, ResponseCallback responseCallback, Object authorizationCallbackContext) throws ProvisioningDeviceClientException
+    {
         if (requestData == null)
         {
-            throw new ProvisioningDeviceConnectionException(new IllegalArgumentException("RequestData cannot be null"));
+            throw new ProvisioningDeviceClientException(new IllegalArgumentException("requestData cannot be null"));
+        }
+        if (responseCallback == null)
+        {
+            throw new ProvisioningDeviceClientException("responseCallback cannot be null");
         }
         String registrationId = requestData.getRegistrationId();
         if (registrationId == null || registrationId.isEmpty())
         {
-            throw new ProvisioningDeviceConnectionException(new IllegalArgumentException("registration Id cannot be null or empty"));
+            throw new ProvisioningDeviceClientException(new IllegalArgumentException("registration Id cannot be null or empty"));
+        }
+        byte[] endorsementKey = requestData.getEndorsementKey();
+        if (endorsementKey == null)
+        {
+            throw new ProvisioningDeviceClientException(new IllegalArgumentException("Endorsement key cannot be null"));
+        }
+        byte[] storageRootKey = requestData.getStorageRootKey();
+        if (storageRootKey == null)
+        {
+            throw new ProvisioningDeviceClientException(new IllegalArgumentException("Storage root key cannot be null"));
+        }
+        if (requestData.getSslContext() == null)
+        {
+            throw new ProvisioningDeviceClientException(new IllegalArgumentException("sslContext cannot be null"));
         }
 
         SSLContext sslContext = requestData.getSslContext();
-        if (sslContext == null)
+        if (requestData.isX509())
         {
-            throw new ProvisioningDeviceConnectionException(new IllegalArgumentException("sslContext cannot be null"));
+            this.provisioningAmqpOperations.open(registrationId, sslContext, null, this.useWebSockets);
         }
-
-        this.provisioningAmqpOperations.open(registrationId, sslContext, requestData.isX509(), this.useWebSockets);
-    }
-
-    /**
-     * Indicates to close the connection
-     * @throws ProvisioningDeviceConnectionException If close could not succeed
-     */
-    public synchronized void close() throws ProvisioningDeviceConnectionException
-    {
-        try
+        else
         {
-            this.provisioningAmqpOperations.close();
-        }
-        catch (IOException ex)
-        {
-            throw new ProvisioningDeviceConnectionException("Exception closing amqp", ex);
+            this.amqpSaslHandler = new AmqpsProvisioningSaslHandler(this.idScope, requestData.getRegistrationId(), requestData.getEndorsementKey(), requestData.getStorageRootKey(), responseCallback, authorizationCallbackContext);
+            this.provisioningAmqpOperations.open(registrationId, sslContext, this.amqpSaslHandler, this.useWebSockets);
         }
     }
 
@@ -108,10 +132,10 @@ public class ContractAPIAmqp extends ProvisioningDeviceClientContract
             throw new ProvisioningDeviceClientException("responseCallback cannot be null");
         }
 
-        // SRS_ContractAPIAmqp_07_004: [If amqpConnection is null or not connected, this method shall throw ProvisioningDeviceConnectionException.]
-        if (!this.provisioningAmqpOperations.isAmqpConnected())
+        //if using TPM auth, amqpSaslHandler will not be null and will need the sas token
+        if (this.amqpSaslHandler != null)
         {
-            throw new ProvisioningDeviceConnectionException("Amqp is not connected");
+            this.amqpSaslHandler.setSasToken(requestData.getSasToken());
         }
 
         // SRS_ContractAPIAmqp_07_005: [This method shall send an AMQP message with the property of iotdps-register.]
@@ -156,44 +180,18 @@ public class ContractAPIAmqp extends ProvisioningDeviceClientContract
     }
 
     /**
-     * Requests hub to provide a device key to begin authentication over AMQP (Only for TPM)
-     * @param requestData A non {@code null} value for the RequestData to be used
-     * @param responseCallback A non {@code null} value for the callback
-     * @param authorizationCallbackContext An object for context. Can be {@code null}
-     * @throws ProvisioningDeviceClientException If any of the parameters are invalid ({@code null} or empty)
-     * @throws ProvisioningDeviceTransportException If any of the API calls to transport fail
-     * @throws ProvisioningDeviceHubException If hub responds back with an invalid status
+     * Indicates to close the connection
+     * @throws ProvisioningDeviceConnectionException If close could not succeed
      */
-    public synchronized void requestNonceForTPM(RequestData requestData, ResponseCallback responseCallback, Object authorizationCallbackContext) throws ProvisioningDeviceClientException
+    public synchronized void close() throws ProvisioningDeviceConnectionException
     {
-        if (requestData == null)
+        try
         {
-            throw new ProvisioningDeviceClientException(new IllegalArgumentException("requestData cannot be null"));
+            this.provisioningAmqpOperations.close();
         }
-        if (responseCallback == null)
+        catch (IOException ex)
         {
-            throw new ProvisioningDeviceClientException("responseCallback cannot be null");
+            throw new ProvisioningDeviceConnectionException("Exception closing amqp", ex);
         }
-        String registrationId = requestData.getRegistrationId();
-        if (registrationId == null || registrationId.isEmpty())
-        {
-            throw new ProvisioningDeviceClientException(new IllegalArgumentException("registration Id cannot be null or empty"));
-        }
-        byte[] endorsementKey = requestData.getEndorsementKey();
-        if (endorsementKey == null)
-        {
-            throw new ProvisioningDeviceClientException(new IllegalArgumentException("Endorsement key cannot be null"));
-        }
-        byte[] storageRootKey = requestData.getStorageRootKey();
-        if (storageRootKey == null)
-        {
-            throw new ProvisioningDeviceClientException(new IllegalArgumentException("Storage root key cannot be null"));
-        }
-        if (requestData.getSslContext() == null)
-        {
-            throw new ProvisioningDeviceClientException(new IllegalArgumentException("sslContext cannot be null"));
-        }
-
-        throw new ProvisioningDeviceClientException(new UnsupportedOperationException());
     }
 }

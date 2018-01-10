@@ -220,7 +220,7 @@ public class ContractAPIAmqpTest
                 mockedRequestData.isX509();
                 result = true;
 
-                mockedProvisionAmqpConnection.open(anyString, mockedSslContext, false, false);
+                mockedProvisionAmqpConnection.open(anyString, mockedSslContext, null, false);
             }
         };
 
